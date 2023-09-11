@@ -2,50 +2,52 @@
 #include <stdio.h>
 #include <omp.h>
 
-#define N 128
+#define n 5
+#define N (1 << n)
 
 double mR[2][2] = {{1, 2}, {3, 4}};
 double mI[2][2] = {{5, 6}, {7, 8}};
-double *vLR;
-double *vLI;
-double *vUR;
-double *vUI;
+double *vR;
+double *vI;
+
+void compute(int k) {
+    int K = 1 << k;
+    for (int i = 0; i < N; i += 2 * K) {
+        #pragma omp for simd
+        for (int j = 0; j < K; j++) {
+            double rLR, rLI, rUR, rUI;
+            double *vLR = vR + i;
+            double *vLI = vI + i;
+            double *vUR = vR + i + K;
+            double *vUI = vI + i + K;
+
+            rLR = mR[0][0] * vLR[j] - mI[0][0] * vLI[j] + mR[0][1] * vUR[j] - mI[0][1] * vUI[j];
+            rLI = mR[0][0] * vLI[j] + mI[0][0] * vLR[j] + mR[0][1] * vUI[j] + mI[0][1] * vUR[j];
+            rUR = mR[1][0] * vLR[j] - mI[1][0] * vLI[j] + mR[1][1] * vUR[j] - mI[1][1] * vUI[j];
+            rUI = mR[1][0] * vLI[j] + mI[1][0] * vLR[j] + mR[1][1] * vUI[j] + mI[1][1] * vUR[j];
+
+            vLR[j] = rLR;
+            vLI[j] = rLI;
+            vUR[j] = rUR;
+            vUI[j] = rUI;
+        }
+    }
+}
 
 int main() {
-    vLR = (double *) malloc(N * sizeof(double));
-    vLI = (double *) malloc(N * sizeof(double));
-    vUR = (double *) malloc(N * sizeof(double));
-    vUI = (double *) malloc(N * sizeof(double));
+    vR = (double *) malloc(N * sizeof(double));
+    vI = (double *) malloc(N * sizeof(double));
 
     for (int i = 0; i < N; i++) {
-        vLR[i] = 4 * i;
-        vLI[i] = 4 * i + 1;
-        vUR[i] = 4 * i + 2;
-        vUI[i] = 4 * i + 3;
+        vR[i] = 2 * i;
+        vI[i] = 2 * i + 1;
     }
 
-    #pragma omp for simd
-    for (int i = 0; i < N; i++) {
-        double rLR, rLI, rUR, rUI;
-
-        rLR = mR[0][0] * vLR[i] - mI[0][0] * vLI[i] + mR[0][1] * vUR[i] - mI[0][1] * vUI[i];
-        rLI = mR[0][0] * vLI[i] + mI[0][0] * vLR[i] + mR[0][1] * vUI[i] + mI[0][1] * vUR[i];
-        rUR = mR[1][0] * vLR[i] - mI[1][0] * vLI[i] + mR[1][1] * vUR[i] - mI[1][1] * vUI[i];
-        rUI = mR[1][0] * vLI[i] + mI[1][0] * vLR[i] + mR[1][1] * vUI[i] + mI[1][1] * vUR[i];
-
-        vLR[i] = rLR;
-        vLI[i] = rLI;
-        vUR[i] = rUR;
-        vUI[i] = rUI;
-    }
+    compute(3);
 
     for (int i = 0; i < N; i++) {
-        printf("vLR[%d] = %f\n", i, vLR[i]);
-        printf("vLI[%d] = %f\n", i, vLI[i]);
-        
-        printf("vUR[%d] = %f\n", i, vUR[i]);
-        printf("vUI[%d] = %f\n", i, vUI[i]);
-
+        printf("vR[%d] = %f\n", i, vR[i]);
+        printf("vI[%d] = %f\n", i, vI[i]);
         printf("\n");
     }
 }
